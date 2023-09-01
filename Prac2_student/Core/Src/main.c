@@ -50,12 +50,11 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim16;
-uint8_t index = 0;
 
 /* USER CODE BEGIN PV */
 // TODO: Define any input variables
 static uint8_t patterns[] = {0b10101010, 0b01010101, 0b11001100, 0b00110011, 0b11110000, 0b00001111};
-
+uint8_t patternsIndex = 0;
 
 /* USER CODE END PV */
 
@@ -110,12 +109,12 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim16);
 
   // TODO: Write all "patterns" to EEPROM using SPI
-  write_to_address(0x00, patterns[0]);
-  write_to_address(0x10, patterns[1]);
-  write_to_address(0x20, patterns[2]);
-  write_to_address(0x30, patterns[3]);
-  write_to_address(0x40, patterns[4]);
-  write_to_address(0x50, patterns[5]);
+  write_to_address(0x0, patterns[0]);
+  write_to_address(0x1, patterns[1]);
+  write_to_address(0x2, patterns[2]);
+  write_to_address(0x3, patterns[3]);
+  write_to_address(0x4, patterns[4]);
+  write_to_address(0x5, patterns[5]);
 
   /* USER CODE END 2 */
 
@@ -129,6 +128,17 @@ int main(void)
 
 	// TODO: Check button PA0; if pressed, change timer delay
 	  //if GPIOA = 1 do...
+	  if(!(HAL_GPIO_ReadPin(GPIOA, 0))) {
+		  if (htim16.Instance -> ARR == 999) {
+			  HAL_TIM_Base_Stop(&htim16);
+			  htim16.Instance -> ARR = 500 - 1;
+			  HAL_TIM_Base_Start(&htim16);
+		  } else {
+			  HAL_TIM_Base_Stop(&htim16);
+			  htim16.Instance -> ARR = 1000 - 1;
+			  HAL_TIM_Base_Start(&htim16);
+		  }
+	  }
 
   }
   /* USER CODE END 3 */
@@ -437,17 +447,26 @@ void TIM16_IRQHandler(void)
 	HAL_TIM_IRQHandler(&htim16);
 
 	// TODO: Change to next LED pattern; output 0x01 if the read SPI data is incorrect
-	int temp = read_from_address(index*16);
-	switch (temp) {
-		case patterns[index]:
-			GPIOB->ODR = temp;
-			break;
-		default:
-			//set LEDs to 0b00000001
-			GPIOB->ODR = 1;
-			break;
+
+	if (read_from_address(patternsIndex) == patterns[patternsIndex]) {
+		GPIOB->ODR = read_from_address(patternsIndex);
+	} else {
+		GPIOB -> ODR = 1;
 	}
-	index++;
+
+	patternsIndex++;
+	patternsIndex %= 5;
+
+//	switch (temp) {
+//		case 0b10101010:
+//			GPIOB->ODR = temp;
+//			break;
+//		default:
+//			//set LEDs to 0b00000001
+//			GPIOB->ODR = 1;
+//			break;
+//	}
+//	index++;
 
 //		if (0) {
 //			//set LEDs to 0b00000001
